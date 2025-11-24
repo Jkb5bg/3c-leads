@@ -155,23 +155,52 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
             <p>No leads found matching your criteria</p>
           </div>
         ) : (
-          paginatedLeads.map(lead => (
-            <div
-              key={lead.id}
-              className="lead-card"
-              onClick={() => onSelectLead(lead)}
-            >
-              <div className="lead-card-header">
-                <h3>{lead.company}</h3>
-                <span
-                  className="status-badge"
-                  style={{ backgroundColor: getStatusColor(lead.status) }}
-                >
-                  {lead.status}
-                </span>
-              </div>
+          paginatedLeads.map(lead => {
+            // Check if anyone answered
+            const hasAnswered = lead.callHistory.some(call => call.outcome === 'answered');
+            // Get most recent call
+            const mostRecentCall = lead.callHistory.length > 0
+              ? lead.callHistory[lead.callHistory.length - 1]
+              : null;
 
-              <div className="lead-card-body">
+            return (
+              <div
+                key={lead.id}
+                className="lead-card"
+                onClick={() => onSelectLead(lead)}
+              >
+                <div className="lead-card-header">
+                  <h3>{lead.company}</h3>
+                  <span
+                    className="status-badge"
+                    style={{ backgroundColor: getStatusColor(lead.status) }}
+                  >
+                    {lead.status}
+                  </span>
+                </div>
+
+                {/* Call Status Banner */}
+                {lead.callHistory.length > 0 && (
+                  <div className={`call-status-banner ${hasAnswered ? 'answered' : 'not-answered'}`}>
+                    <div className="call-status-info">
+                      <span className="call-status-label">
+                        {hasAnswered ? '✓ Answered' : '○ Not Answered'}
+                      </span>
+                      {mostRecentCall && (
+                        <span className="call-time">
+                          Last call: {new Date(mostRecentCall.date).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="lead-card-body">
                 <div className="lead-info-row">
                   <span className="label">POC:</span>
                   <span className="value">{lead.pocName}</span>
@@ -211,7 +240,8 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
                 )}
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
 

@@ -159,6 +159,47 @@
   white-space: nowrap;
 }
 
+.call-status-banner {
+  padding: 10px 15px;
+  margin: 10px -20px;
+  border-left: 4px solid;
+  font-size: 13px;
+}
+
+.call-status-banner.answered {
+  background: #f0fdf4;
+  border-color: #10b981;
+}
+
+.call-status-banner.not-answered {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.call-status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.call-status-label {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.call-status-banner.answered .call-status-label {
+  color: #059669;
+}
+
+.call-status-banner.not-answered .call-status-label {
+  color: #d97706;
+}
+
+.call-time {
+  font-size: 12px;
+  color: #6b7280;
+}
+
 .lead-card-body {
   display: flex;
   flex-direction: column;
