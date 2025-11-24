@@ -1,11 +1,16 @@
 import AWS from 'aws-sdk';
 
-// Configure AWS SDK
-// These will be set from environment variables
+// Configure AWS SDK with Cognito Identity Pool
+// This provides temporary credentials without storing IAM keys in the frontend
+// Much more secure than hardcoding access keys!
+AWS.config.region = process.env.REACT_APP_AWS_REGION || 'us-east-1';
+AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+  IdentityPoolId: process.env.REACT_APP_COGNITO_IDENTITY_POOL_ID,
+});
+
 const s3 = new AWS.S3({
-  accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
-  region: process.env.REACT_APP_AWS_REGION || 'us-east-1'
+  apiVersion: '2006-03-01',
+  params: { Bucket: process.env.REACT_APP_S3_BUCKET_NAME }
 });
 
 const BUCKET_NAME = process.env.REACT_APP_S3_BUCKET_NAME;
