@@ -1,33 +1,35 @@
-import AWS from 'aws-sdk';
+// Simple S3 service using public bucket access
+// No authentication needed - bucket is publicly accessible
+// WARNING: Anyone with the URL can read/write data!
 
-// Configure AWS SDK
-// These will be set from environment variables
-const s3 = new AWS.S3({
-  accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
-  region: process.env.REACT_APP_AWS_REGION || 'us-east-1'
-});
-
-const BUCKET_NAME = process.env.REACT_APP_S3_BUCKET_NAME;
+const BUCKET_URL = process.env.REACT_APP_S3_BUCKET_URL;
 const LEADS_FILE_KEY = 'leads-data.json';
+const LEADS_URL = `${BUCKET_URL}/${LEADS_FILE_KEY}`;
 
 /**
  * Fetch leads data from S3
  */
 export async function fetchLeadsFromS3() {
   try {
-    const params = {
-      Bucket: BUCKET_NAME,
-      Key: LEADS_FILE_KEY
-    };
+    const response = await fetch(LEADS_URL, {
+      method: 'GET',
+      cache: 'no-cache'
+    });
 
-    const data = await s3.getObject(params).promise();
-    const leadsData = JSON.parse(data.Body.toString('utf-8'));
-    return leadsData;
-  } catch (error) {
-    if (error.code === 'NoSuchKey') {
+    if (response.status === 404) {
       // File doesn't exist yet, return empty array
       console.log('No leads file found, returning empty array');
+      return [];
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const leadsData = await response.json();
+    return leadsData;
+  } catch (error) {
+    if (error.message.includes('404')) {
       return [];
     }
     console.error('Error fetching leads from S3:', error);
@@ -40,14 +42,18 @@ export async function fetchLeadsFromS3() {
  */
 export async function saveLeadsToS3(leads) {
   try {
-    const params = {
-      Bucket: BUCKET_NAME,
-      Key: LEADS_FILE_KEY,
-      Body: JSON.stringify(leads, null, 2),
-      ContentType: 'application/json'
-    };
+    const response = await fetch(LEADS_URL, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(leads, null, 2)
+    });
 
-    await s3.putObject(params).promise();
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     console.log('Leads saved to S3 successfully');
     return true;
   } catch (error) {
@@ -111,15 +117,20 @@ export async function createBackup() {
   try {
     const leads = await fetchLeadsFromS3();
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupUrl = `${BUCKET_URL}/backups/leads-backup-${timestamp}.json`;
 
-    const params = {
-      Bucket: BUCKET_NAME,
-      Key: `backups/leads-backup-${timestamp}.json`,
-      Body: JSON.stringify(leads, null, 2),
-      ContentType: 'application/json'
-    };
+    const response = await fetch(backupUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(leads, null, 2)
+    });
 
-    await s3.putObject(params).promise();
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     console.log('Backup created successfully');
     return true;
   } catch (error) {
@@ -133,8 +144,10 @@ export async function createBackup() {
  */
 export async function testS3Connection() {
   try {
-    await s3.headBucket({ Bucket: BUCKET_NAME }).promise();
-    return true;
+    const response = await fetch(LEADS_URL, {
+      method: 'HEAD'
+    });
+    return response.ok || response.status === 404; // 404 is ok, means bucket exists but file doesn't
   } catch (error) {
     console.error('S3 connection test failed:', error);
     return false;
