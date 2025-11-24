@@ -1,4 +1,78 @@
-# Getting Started with Create React App
+# 3C Leads CRM
+
+A simple, lightweight CRM system for tracking government contract leads, built with React and AWS S3.
+
+## Features
+
+- **Password Protected**: Secure login to protect your lead data
+- **Lead Management**: Import, view, search, and filter thousands of leads
+- **Contact Tracking**: Add phone numbers, emails, and other contact details
+- **Call Logging**: Track every call with outcomes, duration, and notes
+- **Status Management**: Mark leads as new, contacted, qualified, or unqualified
+- **S3 Backend**: No database needed - all data stored in your AWS S3 bucket
+- **Responsive Design**: Works on desktop and mobile
+
+## Quick Start
+
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Set up AWS S3** (see [SETUP.md](SETUP.md) for detailed instructions)
+
+3. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your AWS credentials and password
+   ```
+
+4. **Start the app**
+   ```bash
+   npm start
+   ```
+
+5. **Import your leads**
+   - Login with your password
+   - Click "Import Leads.txt"
+   - Select your leads file
+
+## Documentation
+
+See [SETUP.md](SETUP.md) for complete setup instructions including:
+- AWS S3 bucket creation
+- IAM user configuration
+- CORS setup
+- Deployment options
+- Troubleshooting
+
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── Login.js          # Password-protected login
+│   ├── LeadsList.js      # Main dashboard with search/filter
+│   └── LeadDetail.js     # Detailed lead view with call tracking
+├── services/
+│   └── s3Service.js      # AWS S3 integration
+├── utils/
+│   └── leadsParser.js    # Parse leads.txt file
+└── App.js                # Main application component
+```
+
+## Technology Stack
+
+- **Frontend**: React 19
+- **Storage**: AWS S3
+- **Authentication**: Simple password (localStorage)
+- **Styling**: Custom CSS
+
+## Cost
+
+Running this CRM costs less than $1/month on AWS S3 for typical usage.
+
+## Built with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
