@@ -5,24 +5,26 @@
 
 export function parseLeadsFile(fileContent) {
   const leads = [];
-  const leadBlocks = fileContent.split('========================================================');
 
-  leadBlocks.forEach(block => {
-    const trimmedBlock = block.trim();
-    if (!trimmedBlock || !trimmedBlock.includes('⭐ Qualified Lead:')) {
-      return;
-    }
+  // Split by the header pattern to get individual leads
+  const leadPattern = /⭐ Qualified Lead:/g;
+  const matches = [...fileContent.matchAll(leadPattern)];
+
+  matches.forEach((match, index) => {
+    const startIndex = match.index;
+    const endIndex = index < matches.length - 1 ? matches[index + 1].index : fileContent.length;
+    const leadBlock = fileContent.substring(startIndex, endIndex);
 
     const lead = {
       id: generateLeadId(),
-      company: extractField(trimmedBlock, '⭐ Qualified Lead:', '\n'),
-      uei: extractField(trimmedBlock, '🆔 \\*\\*UEI:\\*\\*', '\n'),
-      pocName: extractField(trimmedBlock, '👤 \\*\\*POC Name:\\*\\*', '\n'),
-      initialEntityDate: extractField(trimmedBlock, '📅 \\*\\*Initial Entity Date \\(2-Year Filter\\):\\*\\*', '\n'),
-      recentActivationDate: extractField(trimmedBlock, '✅ \\*\\*Recent Activation Date \\(3-Month Filter\\):\\*\\*', '\n'),
-      address: extractField(trimmedBlock, '📍 \\*\\*Address:\\*\\*', '\n'),
-      naicsCount: extractField(trimmedBlock, '🏭 \\*\\*NAICS Count:\\*\\*', '\n'),
-      naicsCodes: extractField(trimmedBlock, '💡 \\*\\*NAICS Codes:\\*\\*', '\n'),
+      company: extractValue(leadBlock, '⭐ Qualified Lead:', ['=', '🆔', '\n\n']),
+      uei: extractValue(leadBlock, '**UEI:**', ['\n', '👤']),
+      pocName: extractValue(leadBlock, '**POC Name:**', ['\n', '📅']),
+      initialEntityDate: extractValue(leadBlock, '**Initial Entity Date (2-Year Filter):**', ['\n', '✅']),
+      recentActivationDate: extractValue(leadBlock, '**Recent Activation Date (3-Month Filter):**', ['\n', '📍']),
+      address: extractValue(leadBlock, '**Address:**', ['\n', '🏭']),
+      naicsCount: extractValue(leadBlock, '**NAICS Count:**', ['\n', '💡']),
+      naicsCodes: extractValue(leadBlock, '**NAICS Codes:**', ['\n', '=']),
 
       // Contact info to be added manually
       phone: '',
@@ -44,12 +46,24 @@ export function parseLeadsFile(fileContent) {
 }
 
 /**
- * Extract field value using regex pattern
+ * Extract field value - find text after pattern until any of the stop patterns
  */
-function extractField(text, fieldPattern, endPattern) {
-  const regex = new RegExp(`${fieldPattern}\\s*(.+?)${endPattern}`, 's');
-  const match = text.match(regex);
-  return match ? match[1].trim() : '';
+function extractValue(text, startPattern, stopPatterns) {
+  const startIndex = text.indexOf(startPattern);
+  if (startIndex === -1) return '';
+
+  const valueStart = startIndex + startPattern.length;
+  let valueEnd = text.length;
+
+  // Find the earliest stop pattern
+  for (const stopPattern of stopPatterns) {
+    const stopIndex = text.indexOf(stopPattern, valueStart);
+    if (stopIndex !== -1 && stopIndex < valueEnd) {
+      valueEnd = stopIndex;
+    }
+  }
+
+  return text.substring(valueStart, valueEnd).trim();
 }
 
 /**

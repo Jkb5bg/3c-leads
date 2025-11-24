@@ -5,6 +5,13 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
+  const [currentPage, setCurrentPage] = useState(1);
+  const leadsPerPage = 50; // Show 50 leads per page
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, sortBy]);
 
   const filteredLeads = leads
     .filter(lead => {
@@ -54,6 +61,12 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
     unqualified: leads.filter(l => l.status === 'unqualified').length
   };
 
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredLeads.length / leadsPerPage);
+  const startIndex = (currentPage - 1) * leadsPerPage;
+  const endIndex = startIndex + leadsPerPage;
+  const paginatedLeads = filteredLeads.slice(startIndex, endIndex);
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'new': return '#3b82f6';
@@ -62,6 +75,11 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
       case 'unqualified': return '#ef4444';
       default: return '#6b7280';
     }
+  };
+
+  const goToPage = (page) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -137,7 +155,7 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
             <p>No leads found matching your criteria</p>
           </div>
         ) : (
-          filteredLeads.map(lead => (
+          paginatedLeads.map(lead => (
             <div
               key={lead.id}
               className="lead-card"
@@ -196,6 +214,80 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
           ))
         )}
       </div>
+
+      {filteredLeads.length > 0 && totalPages > 1 && (
+        <div className="pagination">
+          <div className="pagination-info">
+            Showing {startIndex + 1}-{Math.min(endIndex, filteredLeads.length)} of {filteredLeads.length} leads
+          </div>
+
+          <div className="pagination-controls">
+            <button
+              onClick={() => goToPage(1)}
+              disabled={currentPage === 1}
+              className="page-btn"
+            >
+              « First
+            </button>
+
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="page-btn"
+            >
+              ‹ Prev
+            </button>
+
+            <div className="page-numbers">
+              {currentPage > 2 && (
+                <>
+                  <button onClick={() => goToPage(1)} className="page-number">1</button>
+                  {currentPage > 3 && <span className="page-ellipsis">...</span>}
+                </>
+              )}
+
+              {currentPage > 1 && (
+                <button onClick={() => goToPage(currentPage - 1)} className="page-number">
+                  {currentPage - 1}
+                </button>
+              )}
+
+              <button className="page-number active">{currentPage}</button>
+
+              {currentPage < totalPages && (
+                <button onClick={() => goToPage(currentPage + 1)} className="page-number">
+                  {currentPage + 1}
+                </button>
+              )}
+
+              {currentPage < totalPages - 1 && (
+                <>
+                  {currentPage < totalPages - 2 && <span className="page-ellipsis">...</span>}
+                  <button onClick={() => goToPage(totalPages)} className="page-number">
+                    {totalPages}
+                  </button>
+                </>
+              )}
+            </div>
+
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="page-btn"
+            >
+              Next ›
+            </button>
+
+            <button
+              onClick={() => goToPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="page-btn"
+            >
+              Last »
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
