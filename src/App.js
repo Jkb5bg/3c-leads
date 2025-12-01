@@ -12,6 +12,7 @@ function App() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const saveTimeoutRef = React.useRef(null);
 
   useEffect(() => {
     const authStatus = localStorage.getItem('isAuthenticated');
@@ -25,6 +26,22 @@ function App() {
       loadLeads();
     }
   }, [isAuthenticated]);
+
+  // Save pending changes on page unload
+  useEffect(() => {
+    const handleBeforeUnload = async () => {
+      if (saveTimeoutRef.current && leads.length > 0) {
+        clearTimeout(saveTimeoutRef.current);
+        // Use navigator.sendBeacon for reliable save on page close
+        const blob = new Blob([JSON.stringify(leads, null, 2)], { type: 'application/json' });
+        const url = `${process.env.REACT_APP_S3_BUCKET_URL}/leads-data.json`;
+        navigator.sendBeacon(url, blob);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [leads]);
 
   const loadLeads = async () => {
     setIsLoading(true);
@@ -44,7 +61,18 @@ function App() {
     setIsAuthenticated(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Save any pending changes before logout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      try {
+        await saveLeadsToS3(leads);
+        console.log('✓ Saved pending changes before logout');
+      } catch (err) {
+        console.error('Error saving before logout:', err);
+      }
+    }
+
     localStorage.removeItem('isAuthenticated');
     setIsAuthenticated(false);
     setLeads([]);
@@ -52,22 +80,32 @@ function App() {
   };
 
   const handleUpdateLead = async (updatedLead) => {
-    try {
-      await updateLead(updatedLead);
+    // Optimistic update - update UI immediately for instant response
+    const updatedLeads = leads.map(lead =>
+      lead.id === updatedLead.id ? updatedLead : lead
+    );
 
-      setLeads(prevLeads =>
-        prevLeads.map(lead =>
-          lead.id === updatedLead.id ? updatedLead : lead
-        )
-      );
+    setLeads(updatedLeads);
 
-      if (selectedLead && selectedLead.id === updatedLead.id) {
-        setSelectedLead(updatedLead);
-      }
-    } catch (err) {
-      console.error('Error updating lead:', err);
-      setError('Failed to update lead');
+    if (selectedLead && selectedLead.id === updatedLead.id) {
+      setSelectedLead(updatedLead);
     }
+
+    // Debounce saves to S3 - only save after 2 seconds of no activity
+    // This batches multiple quick edits into one save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await saveLeadsToS3(updatedLeads);
+        console.log('✓ Saved to S3');
+      } catch (err) {
+        console.error('Error saving to S3:', err);
+        setError('Warning: Changes not saved to S3. Will retry...');
+      }
+    }, 2000); // Wait 2 seconds after last change
   };
 
   const handleFileUpload = async (event) => {
