@@ -5,6 +5,7 @@ import LeadsList from './components/LeadsList';
 import LeadDetail from './components/LeadDetail';
 import { fetchLeadsFromS3, updateLead, saveLeadsToS3, uploadInitialLeadsFile } from './services/s3Service';
 import { parseLeadsFile } from './utils/leadsParser';
+import { parseCSVLeadsFile } from './utils/csvParser';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -112,6 +113,14 @@ function App() {
     const file = event.target.files[0];
     if (!file) return;
 
+    const isCSV = file.name.toLowerCase().endsWith('.csv');
+    const isTXT = file.name.toLowerCase().endsWith('.txt');
+
+    if (!isCSV && !isTXT) {
+      setError('Please upload a .txt or .csv file');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -120,9 +129,20 @@ function App() {
       reader.onload = async (e) => {
         try {
           const fileContent = e.target.result;
-          const parsedLeads = await uploadInitialLeadsFile(fileContent, parseLeadsFile);
-          setLeads(parsedLeads);
-          alert(`Successfully imported ${parsedLeads.length} leads!`);
+
+          if (isCSV) {
+            // CSV: Parse and ADD to existing leads
+            const newLeads = parseCSVLeadsFile(fileContent);
+            const combinedLeads = [...leads, ...newLeads];
+            await saveLeadsToS3(combinedLeads);
+            setLeads(combinedLeads);
+            alert(`Successfully added ${newLeads.length} fresh leads!\nTotal leads: ${combinedLeads.length}`);
+          } else {
+            // TXT: Parse and REPLACE all leads
+            const parsedLeads = await uploadInitialLeadsFile(fileContent, parseLeadsFile);
+            setLeads(parsedLeads);
+            alert(`Successfully imported ${parsedLeads.length} leads!`);
+          }
         } catch (err) {
           console.error('Error uploading file:', err);
           setError('Failed to parse and upload leads file');
@@ -151,12 +171,12 @@ function App() {
             <input
               type="file"
               id="file-upload"
-              accept=".txt"
+              accept=".txt,.csv"
               onChange={handleFileUpload}
               style={{ display: 'none' }}
             />
             <label htmlFor="file-upload" className="btn-upload">
-              Import Leads.txt
+              Import Leads
             </label>
             <button onClick={handleLogout} className="btn-logout">
               Logout

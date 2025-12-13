@@ -35,6 +35,10 @@ export function parseLeadsFile(fileContent) {
       notes: '',
       status: 'new', // new, contacted, qualified, unqualified
       lastContactDate: null,
+
+      // SOURCE TAG - Original leads from .txt file
+      source: 'original',
+
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
