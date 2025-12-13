@@ -1,6 +1,6 @@
 /**
  * Parser for CSV leads file
- * Format: UEI,CAGE_CODE,STATUS,INITIAL_REG_DATE,EXPIRATION_DATE,LAST_UPDATE_DATE,LEGAL_BUSINESS_NAME,CITY,STATE,ZIP
+ * Format: UEI,CAGE_CODE,STATUS,INITIAL_REG_DATE,EXPIRATION_DATE,LAST_UPDATE_DATE,LEGAL_BUSINESS_NAME,CITY,STATE,ZIP,POC_FIRST_NAME,POC_LAST_NAME
  */
 
 export function parseCSVLeadsFile(fileContent) {
@@ -14,8 +14,8 @@ export function parseCSVLeadsFile(fileContent) {
     // Parse CSV line (handles commas in quoted fields)
     const fields = parseCSVLine(line);
 
-    if (fields.length < 10) {
-      console.warn('Skipping invalid line:', line);
+    if (fields.length < 12) {
+      console.warn('Skipping invalid line (expected 12 fields):', line);
       return;
     }
 
@@ -29,7 +29,9 @@ export function parseCSVLeadsFile(fileContent) {
       legalBusinessName,
       city,
       state,
-      zip
+      zip,
+      pocFirstName,
+      pocLastName
     ] = fields;
 
     // Skip if no UEI or business name
@@ -37,11 +39,14 @@ export function parseCSVLeadsFile(fileContent) {
       return;
     }
 
+    // Combine POC first and last name
+    const pocName = `${pocFirstName.trim()} ${pocLastName.trim()}`.trim();
+
     const lead = {
       id: generateLeadId(),
       company: legalBusinessName.trim(),
       uei: uei.trim(),
-      pocName: '', // Not in CSV, will need to research
+      pocName: pocName, // Now extracted from CSV!
       initialEntityDate: formatDate(initialRegDate),
       recentActivationDate: formatDate(lastUpdateDate),
       address: `${city}, ${state} ${zip}`.trim(),
