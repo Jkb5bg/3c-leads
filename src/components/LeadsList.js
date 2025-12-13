@@ -4,6 +4,7 @@ import './LeadsList.css';
 function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all'); // NEW: Filter by fresh vs original
   const [sortBy, setSortBy] = useState('recent');
   const [currentPage, setCurrentPage] = useState(1);
   const leadsPerPage = 50; // Show 50 leads per page
@@ -11,12 +12,17 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, sortBy]);
+  }, [searchTerm, statusFilter, sourceFilter, sortBy]);
 
   const filteredLeads = leads
     .filter(lead => {
       // Status filter
       if (statusFilter !== 'all' && lead.status !== statusFilter) {
+        return false;
+      }
+
+      // Source filter (fresh vs original)
+      if (sourceFilter !== 'all' && lead.source !== sourceFilter) {
         return false;
       }
 
@@ -61,6 +67,11 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
     unqualified: leads.filter(l => l.status === 'unqualified').length
   };
 
+  const sourceCounts = {
+    fresh: leads.filter(l => l.source === 'fresh').length,
+    original: leads.filter(l => l.source === 'original').length
+  };
+
   // Calculate pagination
   const totalPages = Math.ceil(filteredLeads.length / leadsPerPage);
   const startIndex = (currentPage - 1) * leadsPerPage;
@@ -97,6 +108,18 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
             <span className="stat-label">Total Leads</span>
             <span className="stat-value">{statusCounts.all}</span>
           </div>
+          {sourceCounts.fresh > 0 && (
+            <div className="stat-item">
+              <span className="stat-label">🌟 Fresh</span>
+              <span className="stat-value" style={{ color: '#8b5cf6' }}>{sourceCounts.fresh}</span>
+            </div>
+          )}
+          {sourceCounts.original > 0 && (
+            <div className="stat-item">
+              <span className="stat-label">Original</span>
+              <span className="stat-value">{sourceCounts.original}</span>
+            </div>
+          )}
           <div className="stat-item">
             <span className="stat-label">New</span>
             <span className="stat-value" style={{ color: '#3b82f6' }}>{statusCounts.new}</span>
@@ -134,6 +157,16 @@ function LeadsList({ leads, onSelectLead, onRefresh, isLoading }) {
             <option value="contacted">Contacted</option>
             <option value="qualified">Qualified</option>
             <option value="unqualified">Unqualified</option>
+          </select>
+
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="all">All Leads</option>
+            <option value="fresh">🌟 Fresh Leads</option>
+            <option value="original">Original Leads</option>
           </select>
 
           <select
